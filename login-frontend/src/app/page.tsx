@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 interface FormState {
+  employeeId: string;
   fullName: string;
   email: string;
   password: string;
@@ -11,13 +12,16 @@ interface FormState {
 }
 
 interface FormErrors {
+  employeeId?: string;
   fullName?: string;
   email?: string;
   password?: string;
   confirmPassword?: string;
+  general?: string;
 }
 
 const initialFormState: FormState = {
+  employeeId: "",
   fullName: "",
   email: "",
   password: "",
@@ -27,24 +31,38 @@ const initialFormState: FormState = {
 
 export default function Home() {
   const [isSignUp, setIsSignUp] = useState(false);
-  const [role, setRole] = useState<"employee" | "admin">("employee");
+
+  // Backend uses Employee / HR
+  const [role, setRole] = useState<"Employee" | "HR">("Employee");
+
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState<FormState>(initialFormState);
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (
     field: keyof FormState,
     value: string | boolean
   ) => {
     setForm((prev) => ({ ...prev, [field]: value }));
-    // Clear the error for this field as the user edits it
-    setErrors((prev) => ({ ...prev, [field]: undefined }));
+
+    setErrors((prev) => ({
+      ...prev,
+      [field]: undefined,
+      general: undefined,
+    }));
+
+    setSubmitted(false);
   };
 
   const validate = (): FormErrors => {
     const newErrors: FormErrors = {};
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (isSignUp && !form.employeeId.trim()) {
+      newErrors.employeeId = "Enter your Employee ID";
+    }
 
     if (isSignUp && !form.fullName.trim()) {
       newErrors.fullName = "Enter your full name";
@@ -58,8 +76,8 @@ export default function Home() {
 
     if (!form.password) {
       newErrors.password = "Enter your password";
-    } else if (isSignUp && form.password.length < 8) {
-      newErrors.password = "Password must be at least 8 characters";
+    } else if (isSignUp && form.password.length < 6) {
+      newErrors.password = "Password must be at least 6 characters";
     }
 
     if (isSignUp) {
@@ -73,15 +91,73 @@ export default function Home() {
     return newErrors;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     const newErrors = validate();
     setErrors(newErrors);
 
-    if (Object.keys(newErrors).length === 0) {
+    if (Object.keys(newErrors).length > 0) {
+      return;
+    }
+
+    setLoading(true);
+    setSubmitted(false);
+
+    try {
+      const endpoint = isSignUp
+        ? "http://127.0.0.1:5000/api/auth/signup"
+        : "http://127.0.0.1:5000/api/auth/login";
+
+      const requestBody = isSignUp
+        ? {
+            employee_id: form.employeeId.trim(),
+            email: form.email.trim(),
+            password: form.password,
+            role: role,
+          }
+        : {
+            email: form.email.trim(),
+            password: form.password,
+          };
+
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setErrors({
+          general: data.message || "Something went wrong",
+        });
+        return;
+      }
+
       setSubmitted(true);
-      // Hook up real auth logic here
-      console.log("Form submitted:", { ...form, role });
+
+      if (isSignUp) {
+        // Account successfully created
+        setForm(initialFormState);
+      } else {
+        // Save logged-in user information for the next dashboard step
+        localStorage.setItem("employee_id", data.user.employee_id);
+        localStorage.setItem("email", data.user.email);
+        localStorage.setItem("role", data.user.role);
+      }
+    } catch (error) {
+      console.error(error);
+
+      setErrors({
+        general:
+          "Cannot connect to the server. Make sure Flask is running on port 5000.",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -105,8 +181,8 @@ export default function Home() {
         {/* LEFT SIDE */}
         <div className="hidden md:flex flex-col justify-between p-12 bg-gradient-to-br from-cyan-500/10 to-violet-600/10">
 
-          {/* Logo */}
           <div>
+            {/* Logo */}
             <div className="flex items-center gap-3">
               <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-cyan-400 to-violet-500 flex items-center justify-center font-bold text-xl">
                 D
@@ -190,10 +266,10 @@ export default function Home() {
               {/* Employee */}
               <button
                 type="button"
-                onClick={() => setRole("employee")}
-                aria-pressed={role === "employee"}
+                onClick={() => setRole("Employee")}
+                aria-pressed={role === "Employee"}
                 className={`p-4 rounded-2xl border text-left transition-all ${
-                  role === "employee"
+                  role === "Employee"
                     ? "border-cyan-400 bg-cyan-400/10 shadow-lg shadow-cyan-500/10"
                     : "border-white/10 bg-white/[0.03] hover:bg-white/[0.07]"
                 }`}
@@ -211,19 +287,19 @@ export default function Home() {
                 </p>
               </button>
 
-              {/* Admin */}
+              {/* HR */}
               <button
                 type="button"
-                onClick={() => setRole("admin")}
-                aria-pressed={role === "admin"}
+                onClick={() => setRole("HR")}
+                aria-pressed={role === "HR"}
                 className={`p-4 rounded-2xl border text-left transition-all ${
-                  role === "admin"
+                  role === "HR"
                     ? "border-violet-400 bg-violet-400/10 shadow-lg shadow-violet-500/10"
                     : "border-white/10 bg-white/[0.03] hover:bg-white/[0.07]"
                 }`}
               >
                 <p className="text-violet-300 text-xs font-bold tracking-wider mb-2">
-                  ADMIN
+                  HR
                 </p>
 
                 <p className="font-semibold">
@@ -239,12 +315,53 @@ export default function Home() {
           </div>
 
           {/* FORM */}
-          <form className="space-y-4" onSubmit={handleSubmit} noValidate>
+          <form
+            className="space-y-4"
+            onSubmit={handleSubmit}
+            noValidate
+          >
+
+            {/* Employee ID - SIGN UP ONLY */}
+            {isSignUp && (
+              <div>
+                <label
+                  htmlFor="employeeId"
+                  className="text-sm text-gray-300"
+                >
+                  Employee ID
+                </label>
+
+                <input
+                  id="employeeId"
+                  type="text"
+                  value={form.employeeId}
+                  onChange={(e) =>
+                    handleChange("employeeId", e.target.value)
+                  }
+                  placeholder="e.g. EMP001"
+                  aria-invalid={!!errors.employeeId}
+                  className={`mt-2 w-full rounded-xl border bg-white/[0.05] px-4 py-3 outline-none transition ${
+                    errors.employeeId
+                      ? "border-red-400 focus:border-red-400"
+                      : "border-white/10 focus:border-cyan-400"
+                  }`}
+                />
+
+                {errors.employeeId && (
+                  <p className="mt-1 text-xs text-red-400">
+                    {errors.employeeId}
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Name - Sign Up Only */}
             {isSignUp && (
               <div>
-                <label htmlFor="fullName" className="text-sm text-gray-300">
+                <label
+                  htmlFor="fullName"
+                  className="text-sm text-gray-300"
+                >
                   Full name
                 </label>
 
@@ -252,18 +369,20 @@ export default function Home() {
                   id="fullName"
                   type="text"
                   value={form.fullName}
-                  onChange={(e) => handleChange("fullName", e.target.value)}
+                  onChange={(e) =>
+                    handleChange("fullName", e.target.value)
+                  }
                   placeholder="Enter your full name"
                   aria-invalid={!!errors.fullName}
-                  aria-describedby={errors.fullName ? "fullName-error" : undefined}
                   className={`mt-2 w-full rounded-xl border bg-white/[0.05] px-4 py-3 outline-none transition ${
                     errors.fullName
                       ? "border-red-400 focus:border-red-400"
                       : "border-white/10 focus:border-cyan-400"
                   }`}
                 />
+
                 {errors.fullName && (
-                  <p id="fullName-error" className="mt-1 text-xs text-red-400">
+                  <p className="mt-1 text-xs text-red-400">
                     {errors.fullName}
                   </p>
                 )}
@@ -272,7 +391,10 @@ export default function Home() {
 
             {/* Email */}
             <div>
-              <label htmlFor="email" className="text-sm text-gray-300">
+              <label
+                htmlFor="email"
+                className="text-sm text-gray-300"
+              >
                 Email address
               </label>
 
@@ -280,18 +402,20 @@ export default function Home() {
                 id="email"
                 type="email"
                 value={form.email}
-                onChange={(e) => handleChange("email", e.target.value)}
+                onChange={(e) =>
+                  handleChange("email", e.target.value)
+                }
                 placeholder="you@company.com"
                 aria-invalid={!!errors.email}
-                aria-describedby={errors.email ? "email-error" : undefined}
                 className={`mt-2 w-full rounded-xl border bg-white/[0.05] px-4 py-3 outline-none transition ${
                   errors.email
                     ? "border-red-400 focus:border-red-400"
                     : "border-white/10 focus:border-cyan-400"
                 }`}
               />
+
               {errors.email && (
-                <p id="email-error" className="mt-1 text-xs text-red-400">
+                <p className="mt-1 text-xs text-red-400">
                   {errors.email}
                 </p>
               )}
@@ -299,20 +423,23 @@ export default function Home() {
 
             {/* Password */}
             <div>
-              <label htmlFor="password" className="text-sm text-gray-300">
+              <label
+                htmlFor="password"
+                className="text-sm text-gray-300"
+              >
                 Password
               </label>
 
               <div className="relative mt-2">
-
                 <input
                   id="password"
                   type={showPassword ? "text" : "password"}
                   value={form.password}
-                  onChange={(e) => handleChange("password", e.target.value)}
+                  onChange={(e) =>
+                    handleChange("password", e.target.value)
+                  }
                   placeholder="Enter your password"
                   aria-invalid={!!errors.password}
-                  aria-describedby={errors.password ? "password-error" : undefined}
                   className={`w-full rounded-xl border bg-white/[0.05] px-4 py-3 pr-16 outline-none transition ${
                     errors.password
                       ? "border-red-400 focus:border-red-400"
@@ -323,25 +450,26 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                  aria-pressed={showPassword}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-gray-400 hover:text-white"
                 >
                   {showPassword ? "Hide" : "Show"}
                 </button>
-
               </div>
+
               {errors.password && (
-                <p id="password-error" className="mt-1 text-xs text-red-400">
+                <p className="mt-1 text-xs text-red-400">
                   {errors.password}
                 </p>
               )}
             </div>
 
-            {/* Confirm Password - Sign Up Only */}
+            {/* Confirm Password */}
             {isSignUp && (
               <div>
-                <label htmlFor="confirmPassword" className="text-sm text-gray-300">
+                <label
+                  htmlFor="confirmPassword"
+                  className="text-sm text-gray-300"
+                >
                   Confirm password
                 </label>
 
@@ -349,18 +477,23 @@ export default function Home() {
                   id="confirmPassword"
                   type="password"
                   value={form.confirmPassword}
-                  onChange={(e) => handleChange("confirmPassword", e.target.value)}
+                  onChange={(e) =>
+                    handleChange(
+                      "confirmPassword",
+                      e.target.value
+                    )
+                  }
                   placeholder="Confirm your password"
                   aria-invalid={!!errors.confirmPassword}
-                  aria-describedby={errors.confirmPassword ? "confirmPassword-error" : undefined}
                   className={`mt-2 w-full rounded-xl border bg-white/[0.05] px-4 py-3 outline-none transition ${
                     errors.confirmPassword
                       ? "border-red-400 focus:border-red-400"
                       : "border-white/10 focus:border-cyan-400"
                   }`}
                 />
+
                 {errors.confirmPassword && (
-                  <p id="confirmPassword-error" className="mt-1 text-xs text-red-400">
+                  <p className="mt-1 text-xs text-red-400">
                     {errors.confirmPassword}
                   </p>
                 )}
@@ -371,12 +504,20 @@ export default function Home() {
             {!isSignUp && (
               <div className="flex items-center justify-between text-sm">
 
-                <label htmlFor="rememberMe" className="flex items-center gap-2 text-gray-400">
+                <label
+                  htmlFor="rememberMe"
+                  className="flex items-center gap-2 text-gray-400"
+                >
                   <input
                     id="rememberMe"
                     type="checkbox"
                     checked={form.rememberMe}
-                    onChange={(e) => handleChange("rememberMe", e.target.checked)}
+                    onChange={(e) =>
+                      handleChange(
+                        "rememberMe",
+                        e.target.checked
+                      )
+                    }
                     className="accent-cyan-400"
                   />
                   Remember me
@@ -392,26 +533,38 @@ export default function Home() {
               </div>
             )}
 
-            {/* Success message */}
+            {/* Error */}
+            {errors.general && (
+              <p className="text-sm text-red-400 text-center">
+                {errors.general}
+              </p>
+            )}
+
+            {/* Success */}
             {submitted && (
               <p className="text-sm text-cyan-300 text-center">
-                {isSignUp ? "Account created." : "Signed in."} Redirecting…
+                {isSignUp
+                  ? "Account created successfully!"
+                  : "Login successful!"}
               </p>
             )}
 
             {/* Main Button */}
             <button
               type="submit"
-              className="w-full py-3.5 rounded-xl font-semibold bg-gradient-to-r from-cyan-400 to-violet-500 text-white hover:scale-[1.02] transition-transform shadow-lg shadow-cyan-500/10"
+              disabled={loading}
+              className="w-full py-3.5 rounded-xl font-semibold bg-gradient-to-r from-cyan-400 to-violet-500 text-white hover:scale-[1.02] transition-transform shadow-lg shadow-cyan-500/10 disabled:opacity-60 disabled:hover:scale-100"
             >
-              {isSignUp
+              {loading
+                ? "Please wait..."
+                : isSignUp
                 ? `Create ${
-                    role === "admin"
-                      ? "Admin"
+                    role === "HR"
+                      ? "Admin / HR"
                       : "Employee"
                   } Account`
                 : `Continue as ${
-                    role === "admin"
+                    role === "HR"
                       ? "Admin / HR"
                       : "Employee"
                   }`}
@@ -431,9 +584,7 @@ export default function Home() {
               onClick={switchMode}
               className="ml-2 text-cyan-300 font-semibold hover:text-cyan-200"
             >
-              {isSignUp
-                ? "Sign in"
-                : "Create one"}
+              {isSignUp ? "Sign in" : "Create one"}
             </button>
 
           </div>
