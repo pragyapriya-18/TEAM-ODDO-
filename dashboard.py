@@ -1,5 +1,3 @@
-# Run with:
-   # py -m streamlit run dashboard.py
 
 import streamlit as st
 import pandas as pd
@@ -110,11 +108,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# --------------------------------------------------------------------------
-# SAMPLE / MOCK DATA
-# (This section will later be replaced with data pulled from database.py)
-# --------------------------------------------------------------------------
-
 kpi_data = {
     "Total Employees": {"value": 48, "sub": "+3 this month"},
     "Present Today": {"value": 41, "sub": "85% attendance"},
@@ -163,9 +156,9 @@ employee_overview = pd.DataFrame(
     }
 )
 
-# --------------------------------------------------------------------------
+
 # SIDEBAR
-# --------------------------------------------------------------------------
+
 with st.sidebar:
     st.markdown('<div class="sidebar-brand">TEAM ODDO HRMS</div>', unsafe_allow_html=True)
     st.markdown('<div class="sidebar-brand-sub">Human Resource Management</div>', unsafe_allow_html=True)
@@ -184,16 +177,15 @@ with st.sidebar:
     st.divider()
     st.button("Logout", use_container_width=True)
 
-# If a module other than Dashboard is selected, show a placeholder note.
-# (Those modules are being built separately by other team members.)
+
 if selected_nav != "Dashboard":
     st.info(f"The **{selected_nav}** module is being built by another team member. "
             f"This app only contains the Dashboard + Analytics module.")
     st.stop()
 
-# --------------------------------------------------------------------------
+
 # TOP SECTION - GREETING + PROFILE AREA
-# --------------------------------------------------------------------------
+
 top_left, top_right = st.columns([4, 1])
 
 with top_left:
@@ -216,9 +208,9 @@ with top_right:
 
 st.write("")
 
-# --------------------------------------------------------------------------
+
 # KPI CARDS
-# --------------------------------------------------------------------------
+
 kpi_cols = st.columns(4)
 
 for col, (label, data) in zip(kpi_cols, kpi_data.items()):
@@ -236,9 +228,9 @@ for col, (label, data) in zip(kpi_cols, kpi_data.items()):
 
 st.write("")
 
-# --------------------------------------------------------------------------
+
 # ATTENDANCE + LEAVE ANALYTICS
-# --------------------------------------------------------------------------
+
 chart_col1, chart_col2 = st.columns(2)
 
 with chart_col1:
@@ -291,9 +283,8 @@ with chart_col2:
     st.altair_chart(leave_chart, use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-# --------------------------------------------------------------------------
 # RECENT ACTIVITY + EMPLOYEE OVERVIEW
-# --------------------------------------------------------------------------
+-
 activity_col, overview_col = st.columns([1, 2])
 
 with activity_col:
@@ -332,8 +323,7 @@ with overview_col:
     )
     st.markdown('</div>', unsafe_allow_html=True)
 
-# --------------------------------------------------------------------------
 # FOOTER
-# --------------------------------------------------------------------------
+
 st.write("")
 st.caption("TEAM ODDO HRMS — Dashboard module.")
