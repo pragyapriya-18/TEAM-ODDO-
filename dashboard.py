@@ -1,13 +1,5 @@
-"""
-TEAM ODDO HRMS - Dashboard + Analytics Module
-------------------------------------------------
-This file ONLY contains the Dashboard + Analytics module.
-It uses sample/mock data for now. It will be connected to the
-SQLite database later by the team.
-
-Run with:
-    py -m streamlit run dashboard.py
-"""
+# Run with:
+   # py -m streamlit run dashboard.py
 
 import streamlit as st
 import pandas as pd
@@ -186,7 +178,6 @@ with st.sidebar:
         "Attendance",
         "Leave",
         "Payroll",
-        "Reports",
     ]
     selected_nav = st.radio("Navigation", nav_options, index=0, label_visibility="collapsed")
 
@@ -345,4 +336,4 @@ with overview_col:
 # FOOTER
 # --------------------------------------------------------------------------
 st.write("")
-st.caption("TEAM ODDO HRMS — Dashboard module. Data shown is sample/mock data for demo purposes.")
+st.caption("TEAM ODDO HRMS — Dashboard module.")
