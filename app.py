@@ -2,12 +2,14 @@ from flask import Flask
 from flask_cors import CORS
 from database import init_db
 from auth import auth_bp
+from flask_cors import CORS
 
 from attendance import attendance_bp
 from leave import leave_bp
 from payroll import payroll_bp
 
 app = Flask(__name__)
+CORS(app)
 
 CORS(app)
 
